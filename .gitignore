@@ -1,0 +1,5 @@
+build/
+environment.yml
+src/quilt.egg-info/
+**/__pychache__/
+**/*.pyc

@@ -1,0 +1,16 @@
+[project]
+name = "quilt"
+version = "0.0.1"
+description = "Reseaerch Data Management Tool"
+readme = "README.md"
+requires-python = ">=3.12.4"
+dependencies = [
+  "argparse"
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+quilt = "quilt.cli:main"
