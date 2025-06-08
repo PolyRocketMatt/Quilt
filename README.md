@@ -2,7 +2,7 @@
 ![Python](https://img.shields.io/badge/C++-20-%233e7fa8?logo=c++&style=for-the-badge)
 
 <p align="center">
-    <img width="128" height="128" src="img/quilt-shadow.png" alt="Quilt Logo" />
+    <img width="128" height="128" src="img/quilt.png" alt="Quilt Logo" />
 </p>
 
 <h1 align="center">Quilt</h1>
