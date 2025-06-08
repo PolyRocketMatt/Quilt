@@ -5,7 +5,7 @@
     <picture>
         <source srcset="img/quilt-shadow.png" media="(prefers-color-scheme: dark)">
         <source srcset="img/quilt-shadow.png" media="(prefers-color-scheme: light)">
-        <img width="128" height="128" src="img/quilt-shadow.png" alt="Quilt Logo" />
+        <img width="256" height="256" src="img/quilt-shadow.png" alt="Quilt Logo" />
     </picture>
 </p>
 
