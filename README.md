@@ -1,5 +1,5 @@
 ![License](https://img.shields.io/badge/License-MIT-%2368AD63?style=for-the-badge)
-![Python](https://img.shields.io/badge/C++-20-%233e7fa8?logo=c++&style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-3.12.4-%233e7fa8?logo=c++&style=for-the-badge)
 
 <p align="center">
     <img width="128" height="128" src="img/quilt-shadow-small.png" alt="Quilt Logo" />
