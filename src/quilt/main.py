@@ -5,8 +5,11 @@ from PyQt6.QtCore import QSize
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import *
 
-# Quilt
-from src.quilt.styles import BIG_BUTTON_STYLE
+
+def load_stylesheet(style_name):
+    with open(f'styles/{style_name}.qss', 'r') as file:
+        return file.read()
+
 
 class QuiltStartupWindow(QMainWindow):
     def __init__(self):
@@ -25,6 +28,7 @@ class QuiltStartupWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         # Buttons
+        btn_style = load_stylesheet("big-button-style")
         btn_new = QToolButton(self)
         btn_open = QToolButton(self)
         btn_settings = QToolButton(self)
@@ -49,9 +53,9 @@ class QuiltStartupWindow(QMainWindow):
         btn_settings.setToolTip("Open settings")
 
         # Apply styles to buttons
-        btn_new.setStyleSheet(BIG_BUTTON_STYLE)
-        btn_open.setStyleSheet(BIG_BUTTON_STYLE)
-        btn_settings.setStyleSheet(BIG_BUTTON_STYLE)
+        btn_new.setStyleSheet(btn_style)
+        btn_open.setStyleSheet(btn_style)
+        btn_settings.setStyleSheet(btn_style)
 
         # Horizontal layout for buttons
         h_layout = QHBoxLayout()
