@@ -1,87 +1,80 @@
-import customtkinter as ctk
-import tkinter
+import sys
 
-import os
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSize
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import *
 
-from PIL import Image
-from tkinter import Menu, filedialog
+# Quilt
+from src.quilt.styles import BIG_BUTTON_STYLE
 
-# Quilt Imports
-from src.quilt.utils import *
-from src.quilt.workspace import Workspace
-
-from src.quilt.ui.widgets import WorkspaceFileWidget
-
-class QuiltDefault(ctk.CTk):
+class QuiltStartupWindow(QMainWindow):
     def __init__(self):
-        super().__init__()        
+        super().__init__()
+        self.setWindowTitle("Quilt Application")
+        self.setGeometry(100, 100, 800, 600)
 
-        # Setting the theme and appearance mode
-        ctk.set_default_color_theme('quilt_theme.json')
-        ctk.set_appearance_mode("light")
+        # Set window icon
+        self.setWindowIcon(QIcon("assets/quilt.ico"))
 
-        # Open in center of the screen
-        self.eval('tk::PlaceWindow . center')
+        # Set window title
+        self.setWindowTitle("Quilt")
 
-        # Creating the main window
-        self.geometry("400x200")
-        self.title(" Quilt")
-        self.wm_iconbitmap('assets/quilt.ico')
+        # Central widget
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
 
-        # Initialize
-        self.load_startup()
+        # Buttons
+        btn_new = QToolButton(self)
+        btn_open = QToolButton(self)
+        btn_settings = QToolButton(self)
+
+        # Set icons for buttons
+        btn_new.setIcon(QIcon("assets/plus-dark.png"))
+        btn_open.setIcon(QIcon("assets/folder-open-dark.png"))
+        btn_settings.setIcon(QIcon("assets/gear-dark.png"))
+
+        # Set button sizes
+        btn_new.setIconSize(QSize(28, 28))
+        btn_open.setIconSize(QSize(28, 28))
+        btn_settings.setIconSize(QSize(28, 28))
+
+        btn_new.setFixedSize(QSize(64, 64))
+        btn_open.setFixedSize(QSize(64, 64))
+        btn_settings.setFixedSize(QSize(64, 64))
+
+        # Set button tooltips
+        btn_new.setToolTip("Create a new project")
+        btn_open.setToolTip("Open an existing project")
+        btn_settings.setToolTip("Open settings")
+
+        # Apply styles to buttons
+        btn_new.setStyleSheet(BIG_BUTTON_STYLE)
+        btn_open.setStyleSheet(BIG_BUTTON_STYLE)
+        btn_settings.setStyleSheet(BIG_BUTTON_STYLE)
+
+        # Horizontal layout for buttons
+        h_layout = QHBoxLayout()
+        h_layout.addStretch(1) # Left spacer
+        h_layout.addWidget(btn_new)
+        h_layout.addSpacing(20)
+        h_layout.addWidget(btn_open)
+        h_layout.addSpacing(20)
+        h_layout.addWidget(btn_settings)    
+        h_layout.addStretch(1) # Right spacer
+
+        # Vertical layout to center horizontal layout
+        v_layout = QVBoxLayout(central_widget)
+        v_layout.addStretch(1) # Top spacer
+        v_layout.addLayout(h_layout)
+        v_layout.addStretch(1) # Bottom spacer
+
+        # Set the layout to the central widget
+        central_widget.setLayout(v_layout)
 
 
-    def load_startup(self):
-        self.btn_open_ws = ctk.CTkButton(self, text="Open Workspace", 
-                                            image=get_ctk_image("folder-open-light"), 
-                                            compound="top", 
-                                            command=self.open_workspace, 
-                                            border_spacing=10,
-                                            border_width=2)
-        self.btn_open_ws.place(relx=0.5, rely=0.5, anchor=tkinter.CENTER)       
-
-
-    def load_workspace(self, dir):
-        self.workspace = Workspace(dir)
-
-
-    def open_workspace(self):
-        dir = filedialog.askdirectory(title=" Select Workspace Directory")
-        if dir == '':
-            return
-        
-        # Hide startup widgets
-        self.btn_open_ws.place_forget()
-
-        # Load the workspace
-        self.load_workspace(dir)
-
-        # Create the workspace UI
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
-    
-         # Create navigation pane
-        self.navigation_frame = ctk.CTkFrame(self, corner_radius=0)
-        self.navigation_frame.grid(row=0, column=0, sticky="nsew")
-        self.navigation_frame.grid_rowconfigure(len(self.workspace.workspace_files) + 1, weight=1)
-
-        self.navigation_title = ctk.CTkLabel(self.navigation_frame, 
-                                             text=f" ",
-                                             compound="left", 
-                                             font=ctk.CTkFont(size=16))
-        self.navigation_title.grid(row=0, column=0, padx=0, pady=0)
-
-        file_icon = get_ctk_image("file-pdf-dark", 24)
-        for i, workspace_file in enumerate(self.workspace.workspace_files):
-            file_widgets = WorkspaceFileWidget(self.navigation_frame,
-                                               width=300,
-                                               height=32,
-                                               text=workspace_file.filename,
-                                               image=file_icon)
-            file_widgets.grid(row=i + 1, column=0, sticky="ew", padx=10, pady=0)
-
-def run_quilt(default_workspace=None):
-    app = QuiltDefault()
-    app.after(0, lambda: app.wm_state('zoomed'))
-    app.mainloop()
+def run_quilt():
+    app = QApplication(sys.argv)
+    start_window = QuiltStartupWindow()
+    start_window.show()
+    sys.exit(app.exec())

@@ -1,0 +1,14 @@
+BIG_BUTTON_STYLE = """
+QToolButton {
+    background-color: transparent;
+    color: #454545;
+    border: none;
+    border-radius: 12px;
+    padding: 10px;
+    font-size: 16px;
+}
+
+QToolButton:hover {
+    background-color: #D9D9D9;
+}
+"""
