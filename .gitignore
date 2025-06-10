@@ -1,5 +1,5 @@
 build/
-assets/icons/**
+assets/icons/*/
 assets/fonts/MavenPro-Regular.ttf
 assets/fonts/Montserrat-Regular.ttf
 test_space/
