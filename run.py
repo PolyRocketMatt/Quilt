@@ -1,4 +1,4 @@
-from src.quilt.main import run_quilt
+from src.quilt.main import main
 
 if __name__ == '__main__':
-    run_quilt()
+    main()

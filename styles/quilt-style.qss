@@ -1,0 +1,87 @@
+QLabel {
+    color: #454545;
+    font-size: 12px;
+}
+
+QPushButton#unimplemented-button {
+    background-color: transparent;
+    color: #454545;
+    border: 0px solid #454545;
+    border-radius: 12px;
+    padding: 5px;
+    font-size: 12px;
+
+    min-width: 100px; /* Ensures a minimum width for the button */
+    min-height: 20px; /* Ensures a minimum height for the button */
+}
+
+QPushButton#unimplemented-button:hover {
+    background-color: #D9D9D9;
+}
+
+QSplitter::handle {
+    background-color: #D9D9D9;
+    width: 2px;
+    border: 1px solid #D9D9D9;
+}
+
+QToolButton#startup-button {
+    background-color: transparent;
+    color: #454545;
+    border: none;
+    border-radius: 12px;
+    padding: 10px;
+    font-size: 16px;
+}
+
+QToolButton#startup-button:hover {
+    background-color: #D9D9D9;
+}
+
+QTreeView#navigation-tree {
+    background-color: #EAEAEB;
+    border: 0px;
+}
+
+QTreeView#navigation-tree::item {
+    color: #454545;
+    padding: 4px;
+}
+
+QTreeView#navigation-tree::item:hover {
+    background-color: #D9D9D9;
+    color: #454545;
+}
+
+QTreeView#navigation-tree::item:selected {
+    background-color: #D9D9D9;
+    color: #454545;
+    border: none;
+    outline: none;
+}
+
+QTreeView#navigation-tree::branch {
+    background-color: transparent;
+}
+
+QTreeView#navigation-tree::branch:closed:has-children {
+    image: url(assets/caret-right-small-dark.png);
+}
+
+QTreeView#navigation-tree::branch:open:has-children {
+    image: url(assets/caret-down-small-dark.png);
+}
+
+QWidget {
+    background-color: #EAEAEB;
+}
+
+QWidget#view-pane {
+    background-color: #ffffff;
+}
+
+QWidget#unimplemented-container {
+    background-color: #EAEAEB;
+    border-radius: 12px;
+    border: 1px solid #EAEAEB;
+}
