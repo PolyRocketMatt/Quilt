@@ -3,6 +3,40 @@ QLabel {
     font-size: 12px;
 }
 
+QLabel#favicon {
+    padding: 5px;
+}
+
+QPushButton#title-bar-button {
+    background-color: transparent;
+    color: #454545;
+    border: 0px solid #454545;
+    padding: 0px;
+    margin: 0px;
+
+    min-width: 42px; /* Ensures a minimum width for the button */
+    min-height: 32px; /* Ensures a minimum height for the button */
+}
+
+QPushButton#title-bar-button:hover {
+    background-color: #D9D9D9;
+}
+
+QPushButton#title-bar-close-button {
+    background-color: transparent;
+    color: #454545;
+    border: 0px solid #454545;
+    padding: 0px;
+    margin: 0px;
+
+    min-width: 42px; /* Ensures a minimum width for the button */
+    min-height: 32px; /* Ensures a minimum height for the button */
+}
+
+QPushButton#title-bar-close-button:hover {
+    background-color: #fc5c65;
+}
+
 QPushButton#unimplemented-button {
     background-color: transparent;
     color: #454545;
@@ -62,14 +96,6 @@ QTreeView#navigation-tree::item:selected {
 
 QTreeView#navigation-tree::branch {
     background-color: transparent;
-}
-
-QTreeView#navigation-tree::branch:closed:has-children {
-    image: url(assets/caret-right-small-dark.png);
-}
-
-QTreeView#navigation-tree::branch:open:has-children {
-    image: url(assets/caret-down-small-dark.png);
 }
 
 QWidget {

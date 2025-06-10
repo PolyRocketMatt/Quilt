@@ -1,22 +1,24 @@
 import sys
 
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QIcon, QColor
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import *
 
-from src.quilt.widgets import QuiltFileSystemModel, QuiltTreeItemDelegate
+from src.quilt.ui.colors import COLORS
+from src.quilt.ui.utils import load_icon, load_colored_icon, load_and_save_padded_icon
+from src.quilt.ui.widgets import QuiltTitleBar, QuiltFileSystemModel, QuiltTreeItemDelegate
 from src.quilt.workspace import QuiltWorkspace
 
 def load_stylesheet(style_name):
     with open(f'styles/{style_name}.qss', 'r') as file:
         return file.read()
 
-
-class QuiltStartupWindow(QMainWindow):
+class QuiltMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Quilt Application")
         self.setGeometry(100, 100, 800, 600)
+        self.setWindowFlags(Qt.FramelessWindowHint)
 
         # Set window icon
         self.setWindowIcon(QIcon("assets/quilt.ico"))
@@ -28,13 +30,23 @@ class QuiltStartupWindow(QMainWindow):
         self.quilt_style = load_stylesheet("quilt-style")
         self.setStyleSheet(self.quilt_style)
 
-        # Central widget
-        central_widget = QWidget()
-        central_widget.setStyleSheet(self.quilt_style)
-        self.setCentralWidget(central_widget)
+        # Main layout
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
-        # Draw the start layout
-        self._build_start_layout()
+        # Title bar
+        layout.addWidget(QuiltTitleBar(self))
+
+        # Obtain starter layout
+        layout.addWidget(self._build_start_layout())
+
+        # Central widget
+        central = QWidget()
+        central.setLayout(layout)
+        central.setStyleSheet(self.quilt_style)
+        self.setCentralWidget(central)
+
 
     def _build_start_layout(self):
         # Buttons
@@ -48,9 +60,9 @@ class QuiltStartupWindow(QMainWindow):
         btn_settings.setObjectName("startup-button")
 
         # Set icons for buttons
-        btn_new.setIcon(QIcon("assets/plus-dark.png"))
-        btn_open.setIcon(QIcon("assets/folder-open-dark.png"))
-        btn_settings.setIcon(QIcon("assets/gear-dark.png"))
+        btn_new.setIcon(load_icon("plus"))
+        btn_open.setIcon(load_icon("folder-open"))
+        btn_settings.setIcon(load_icon("gear"))
 
         # Connect buttons to their respective functions
         btn_new.clicked.connect(self._create_workspace)
@@ -82,13 +94,15 @@ class QuiltStartupWindow(QMainWindow):
         h_layout.addStretch(1) # Right spacer
 
         # Vertical layout to center horizontal layout
+        container = QWidget(self)
         v_layout = QVBoxLayout(self.centralWidget())
         v_layout.addStretch(1) # Top spacer
         v_layout.addLayout(h_layout)
         v_layout.addStretch(1) # Bottom spacer
+        container.setLayout(v_layout)
 
-        # Set the layout to the central widget
-        self.centralWidget().setLayout(v_layout)
+        # Return the container layout
+        return container
 
     def _build_main_layout(self):
         # Create panes
@@ -125,9 +139,11 @@ class QuiltStartupWindow(QMainWindow):
         layout = QVBoxLayout(container)
         layout.addWidget(h_splitter)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        container.setLayout(layout)
 
-        # Set the container as the central widget
-        self.setCentralWidget(container)
+        # Return the main layout
+        return container
 
     def _build_navigation_pane(self):
         navigation_pane = QWidget()
@@ -159,6 +175,19 @@ class QuiltStartupWindow(QMainWindow):
         model.setNameFilters(["*.pdf", "*.md", "*.png", "*.jpg", "*.jpeg", "*.gif"])
         model.setNameFilterDisables(False)
 
+        caret_down_path = load_and_save_padded_icon("caret-down", padding=12)
+        caret_right_path = load_and_save_padded_icon("caret-right", padding=12)
+        caret_style = f"""
+            QTreeView#navigation-tree::branch:closed:has-children {{
+                image: url({caret_right_path});
+            }}
+
+            QTreeView#navigation-tree::branch:open:has-children {{
+                image: url({caret_down_path});
+            }}
+            """
+        full_style_sheet = self.quilt_style + caret_style
+
         tree = QTreeView()
         tree.setObjectName("navigation-tree")
         tree.setModel(model)
@@ -170,6 +199,7 @@ class QuiltStartupWindow(QMainWindow):
         tree.hideColumn(3)  # Last Modified
         tree.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         tree.setItemDelegate(QuiltTreeItemDelegate())  # Use custom delegate to prevent icon tinting
+        tree.setStyleSheet(full_style_sheet)  # Apply the full stylesheet
 
         # -------- Bottom toolbar --------
         bottom_toolbar = QToolBar()
@@ -212,7 +242,7 @@ class QuiltStartupWindow(QMainWindow):
         container.setObjectName("unimplemented-container")
 
         # ---- Icon and message ----
-        icon = QIcon("assets/warning-red.png")
+        icon = QIcon(load_colored_icon("warning-circle", "dark-red"))
         icon_label = QLabel()
         icon_label.setPixmap(icon.pixmap(32, 32))
         icon_label.setAlignment(Qt.AlignTop)
@@ -247,6 +277,8 @@ class QuiltStartupWindow(QMainWindow):
         top_layout.setContentsMargins(0, 0, 0, 0)
         top_layout.addWidget(container)
 
+        # Temporarily hide the 
+
         dialog.setLayout(top_layout)
         dialog.exec()
 
@@ -258,7 +290,18 @@ class QuiltStartupWindow(QMainWindow):
         workspace_dir = QFileDialog.getExistingDirectory(self, "Open Workspace")
         if workspace_dir:
             self.workspace = QuiltWorkspace(workspace_dir)
-            self._build_main_layout()
+
+            layout = QVBoxLayout()
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(0)
+            layout.addWidget(QuiltTitleBar(self))
+            layout.addWidget(self._build_main_layout())
+
+            # Central widget
+            central = QWidget()
+            central.setLayout(layout)
+            central.setStyleSheet(self.quilt_style)
+            self.setCentralWidget(central)
 
     def _open_settings(self):
         self._build_not_implemented_popup()
@@ -266,6 +309,6 @@ class QuiltStartupWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    start_window = QuiltStartupWindow()
-    start_window.show()
+    quilt = QuiltMainWindow()
+    quilt.show()
     sys.exit(app.exec())

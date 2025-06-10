@@ -1,4 +1,6 @@
 build/
+assets/icons/dark-gray/
+assets/icons/dark-red/
 test_space/
 environment.yml
 src/quilt.egg-info/
