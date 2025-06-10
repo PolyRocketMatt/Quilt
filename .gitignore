@@ -1,6 +1,7 @@
 build/
-assets/icons/dark-gray/
-assets/icons/dark-red/
+assets/icons/**
+assets/fonts/MavenPro-Regular.ttf
+assets/fonts/Montserrat-Regular.ttf
 test_space/
 environment.yml
 src/quilt.egg-info/
