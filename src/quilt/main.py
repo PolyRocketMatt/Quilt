@@ -4,9 +4,12 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QFont, QFontDatabase
 from PySide6.QtWidgets import *
 
-from src.quilt.ui.colors import COLORS
 from src.quilt.ui.utils import load_icon, load_colored_icon, load_and_save_padded_icon
-from src.quilt.ui.widgets import QuiltTitleBar, QuiltFileSystemModel, QuiltTreeItemDelegate
+from src.quilt.ui.widgets import (
+    QuiltTitleBar, QuiltFileSystemModel,
+    QuiltPDFViewer, QuiltTreeView, QuiltErrorPopup,
+    QuiltNotImplementedPopup
+)
 from src.quilt.workspace import QuiltWorkspace
 
 def load_stylesheet(style_name):
@@ -21,7 +24,7 @@ class QuiltMainWindow(QMainWindow):
         self.setWindowFlags(Qt.FramelessWindowHint)
 
         # Set window icon
-        self.setWindowIcon(QIcon("assets/quilt.ico"))
+        self.setWindowIcon(QIcon("assets/quilt-nomid.ico"))
 
         # Set window title
         self.setWindowTitle("Quilt")
@@ -105,9 +108,16 @@ class QuiltMainWindow(QMainWindow):
         return container
 
     def _build_main_layout(self):
+        # Create signaling widgets
+        self._build_navigation_tree()
+        self._build_pdf_viewer()
+
+        # Setup widget signaling
+        self.tree.pdf_selected.connect(self.pdf_viewer.load_pdf)
+
         # Create panes
         self.navigation_pane = self._build_navigation_pane()
-        self.view_pane = QWidget()
+        self.view_pane = self._build_view_pane()
         self.feature_pane = QWidget(self)
 
         # Set object names for styling
@@ -169,8 +179,51 @@ class QuiltMainWindow(QMainWindow):
         top_toolbar.addWidget(tool_btn_1)
         top_toolbar.addWidget(tool_btn_2)
 
-        # -------- TreeView (middle) --------
-        model = QuiltFileSystemModel()
+        # -------- Bottom toolbar --------
+        bottom_toolbar = QToolBar()
+        bottom_toolbar.setIconSize(QSize(16, 16))
+        bottom_toolbar.setMovable(False)
+        bottom_toolbar.setFloatable(False)
+
+        bottom_btn = QToolButton()
+        bottom_btn.setText("⚙")
+        bottom_btn.setToolTip("Settings")
+
+        bottom_toolbar.addWidget(bottom_btn)
+
+        # Add widgets to the layout
+        layout.addWidget(top_toolbar)
+        layout.addWidget(self.tree)
+        layout.addWidget(bottom_toolbar)
+
+        # Set the navigation pane layout
+        navigation_pane.setLayout(layout)
+        navigation_pane.setObjectName("navigation-pane")
+
+        return navigation_pane
+
+    def _build_view_pane(self):
+        view_pane = QWidget()
+        layout = QVBoxLayout(view_pane)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Add widgets to the layout
+        layout.addWidget(self.pdf_viewer)
+
+        # Set the view pane layout
+        view_pane.setLayout(layout)
+        view_pane.setObjectName("view-pane")
+
+        return view_pane
+
+
+    def _build_feature_pane(self):
+        pass
+
+    def _build_navigation_tree(self):
+        # Navigation tree
+        model = QuiltFileSystemModel(self)
         model.setRootPath(self.workspace.workspace_dir)
         model.setNameFilters(["*.pdf", "*.md", "*.png", "*.jpg", "*.jpeg", "*.gif"])
         model.setNameFilterDisables(False)
@@ -187,107 +240,18 @@ class QuiltMainWindow(QMainWindow):
             }}
             """
         full_style_sheet = self.quilt_style + caret_style
+        self.tree = QuiltTreeView(self, model, self.workspace, full_style_sheet)
 
-        tree = QTreeView()
-        tree.setObjectName("navigation-tree")
-        tree.setModel(model)
-        tree.setRootIndex(model.index(self.workspace.workspace_dir))
-        tree.setHeaderHidden(True)
-        tree.setFocusPolicy(Qt.NoFocus)  # Disable focus outline
-        tree.hideColumn(1)  # Size
-        tree.hideColumn(2)  # Type
-        tree.hideColumn(3)  # Last Modified
-        tree.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        tree.setItemDelegate(QuiltTreeItemDelegate())  # Use custom delegate to prevent icon tinting
-        tree.setStyleSheet(full_style_sheet)  # Apply the full stylesheet
-
-        # -------- Bottom toolbar --------
-        bottom_toolbar = QToolBar()
-        bottom_toolbar.setIconSize(QSize(16, 16))
-        bottom_toolbar.setMovable(False)
-        bottom_toolbar.setFloatable(False)
-
-        bottom_btn = QToolButton()
-        bottom_btn.setText("⚙")
-        bottom_btn.setToolTip("Settings")
-
-        bottom_toolbar.addWidget(bottom_btn)
-
-        # -------- Add to layout --------
-        layout.addWidget(top_toolbar)
-        layout.addWidget(tree)
-        layout.addWidget(bottom_toolbar)
-
-        # Add the layout to the navigation pane
-        navigation_pane.setLayout(layout)
-        navigation_pane.setObjectName("navigation-pane")
-
-        return navigation_pane
-
-    def _build_view_pane(self):
-        pass
-
-    def _build_feature_pane(self):
-        pass
-
-    def _build_not_implemented_popup(self):
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Not Implemented")
-        dialog.setModal(True)
-        dialog.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
-        dialog.setAttribute(Qt.WA_TranslucentBackground)    
-
-        # ---- Custom container with rounded background ----
-        container = QWidget()
-        container.setObjectName("unimplemented-container")
-
-        # ---- Icon and message ----
-        icon = QIcon(load_colored_icon("warning-circle", "dark-red"))
-        icon_label = QLabel()
-        icon_label.setPixmap(icon.pixmap(32, 32))
-        icon_label.setAlignment(Qt.AlignTop)
-
-        text_label = QLabel("This feature is not implemented yet.")
-        text_label.setWordWrap(False)
-        text_label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-
-        message_layout = QHBoxLayout()
-        message_layout.addWidget(icon_label)
-        message_layout.addWidget(text_label)
-
-        # ---- OK button ----
-        ok_button = QPushButton("OK")
-        ok_button.setObjectName("unimplemented-button")
-        ok_button.clicked.connect(dialog.accept)
-        ok_button.setFixedWidth(80)
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-        button_layout.addWidget(ok_button)
-        button_layout.addStretch()
-
-        # ---- Combine in custom container ----
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.addLayout(message_layout)
-        layout.addSpacing(15)
-        layout.addLayout(button_layout)
-
-        # ---- Top-level layout ----
-        top_layout = QVBoxLayout(dialog)
-        top_layout.setContentsMargins(0, 0, 0, 0)
-        top_layout.addWidget(container)
-
-        # Temporarily hide the 
-
-        dialog.setLayout(top_layout)
-        dialog.exec()
+    def _build_pdf_viewer(self):
+        # PDF Viewer
+        self.pdf_viewer = QuiltPDFViewer(self)
 
     def _create_workspace(self):
-        self._build_not_implemented_popup()
+        QuiltNotImplementedPopup(self)
 
     def _open_workspace(self):
         # Open a file dialog to select a workspace
-        workspace_dir = QFileDialog.getExistingDirectory(self, "Open Workspace")
+        workspace_dir = QFileDialog.getExistingDirectory(self, " Open Workspace")
         if workspace_dir:
             self.workspace = QuiltWorkspace(workspace_dir)
 
@@ -304,8 +268,7 @@ class QuiltMainWindow(QMainWindow):
             self.setCentralWidget(central)
 
     def _open_settings(self):
-        self._build_not_implemented_popup()
-
+        QuiltNotImplementedPopup(self)
 
 def main():
     # Initialize the application

@@ -161,7 +161,7 @@ def svg_to_padded_png_data(svg_file_name, target_color_name=None, width=64, heig
 
 def load_favicon():
     label = QLabel()
-    label.setPixmap(QIcon("assets/quilt.ico").pixmap(16, 16))
+    label.setPixmap(QIcon("assets/quilt-nomid.ico").pixmap(16, 16))
 
     return label
 

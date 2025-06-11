@@ -1,13 +1,17 @@
 from typing import Optional
 
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QUrl, Signal, Slot
 from PySide6.QtGui import QIcon, QMouseEvent
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWebEngineCore import QWebEnginePage
 from PySide6.QtWidgets import (
-    QWidget, QHBoxLayout, QLabel, QPushButton, QFileSystemModel,
-    QStyledItemDelegate, QStyle, QStyleOptionViewItem
+    QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, 
+    QFileSystemModel, QStyledItemDelegate, QStyle, QStyleOptionViewItem,
+    QTreeView, QSizePolicy, QDialog
 )
 
-from src.quilt.ui.utils import load_icon, load_favicon
+from src.quilt.ui.utils import load_icon, load_favicon, load_colored_icon
+from src.quilt.workspace import QuiltWorkspace
 
 
 class QuiltTitleBar(QWidget):
@@ -60,7 +64,7 @@ class QuiltTitleBar(QWidget):
 
     def _update_restore_icon(self) -> None:
         if self.parent.isMaximized():
-            icon, tooltip = "frame-corners", "Restore"
+            icon, tooltip = "copy-simple", "Restore"
         else:
             icon, tooltip = "square", "Maximize"
 
@@ -125,3 +129,120 @@ class QuiltTreeItemDelegate(QStyledItemDelegate):
 
         option_copy.state &= ~QStyle.State_Selected
         super().paint(painter, option_copy, index)
+
+
+class QuiltTreeView(QTreeView):
+    """Custom tree view for displaying file system with custom delegate and model."""
+    pdf_selected = Signal(str)
+
+    def __init__(self, parent: Optional[QWidget] = None, model: Optional[QFileSystemModel] = None,
+                 workspace: Optional[QuiltWorkspace] = None, applied_style_sheet: str = ""):
+        super().__init__(parent)
+        self.workspace = workspace
+        self.setObjectName("navigation-tree")
+        self.setModel(model)
+        self.setRootIndex(model.index(workspace.workspace_dir))
+        self.setHeaderHidden(True)
+        self.setFocusPolicy(Qt.NoFocus)  # Disable focus outline
+        self.hideColumn(1)  # Size
+        self.hideColumn(2)  # Type
+        self.hideColumn(3)  # Last Modified
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setItemDelegate(QuiltTreeItemDelegate())  # Use custom delegate to prevent icon tinting
+        self.setStyleSheet(applied_style_sheet)  # Apply the full stylesheet
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.LeftButton:
+            index = self.indexAt(event.position().toPoint())
+            if index.isValid():
+                self.setCurrentIndex(index)
+                
+                # Find file and metadata
+                workspace_entry = self.workspace.find_pdf_from_name(index.data())
+                if workspace_entry:
+                    raw_path = workspace_entry['path']
+                    pdf_path = str(raw_path).strip()  # Ensure it's a clean string
+                    self.pdf_selected.emit(pdf_path)
+        super().mousePressEvent(event)
+
+
+class QuiltPDFViewer(QWidget):
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.setObjectName("pdf-viewer")
+    
+        self.pdf_layout = QVBoxLayout(self)
+        self.web_view = QWebEngineView()
+        self.web_view.settings().setAttribute(self.web_view.settings().WebAttribute.PluginsEnabled, True)
+        self.web_view.settings().setAttribute(self.web_view.settings().WebAttribute.PdfViewerEnabled, True)
+        self.pdf_layout.addWidget(self.web_view)
+
+    @Slot(str)
+    def load_pdf(self, pdf_path: str) -> None:
+        if pdf_path:
+            pdf_url = QUrl.fromLocalFile(pdf_path)
+            if pdf_url.isValid():
+                self.web_view.setUrl(QUrl.fromLocalFile(pdf_path))
+            else:
+                pass
+
+class QuiltErrorPopup(QDialog):
+    def __init__(self, parent: Optional[QWidget] = None, title: str = '', message: str = ''):
+        super().__init__(parent)
+        self.setWindowTitle(title or "Error")
+        self.setModal(True)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
+        self.setAttribute(Qt.WA_TranslucentBackground) 
+        self.setObjectName("error-popup")
+
+        # Container
+        container = QWidget()
+        container.setObjectName("error-popup")
+
+        # Icon and message
+        icon = QIcon(load_colored_icon("warning-circle", "dark-red", 128, 128))
+        icon_label = QLabel()
+        icon_label.setPixmap(icon.pixmap(32, 32))
+        icon_label.setAlignment(Qt.AlignCenter)
+
+        text_label = QLabel(message)
+        text_label.setWordWrap(False)
+        text_label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+
+        # Layout
+        message_layout = QHBoxLayout()
+        message_layout.addWidget(icon_label)
+        message_layout.addWidget(text_label)
+        message_layout.setContentsMargins(10, 10, 10, 10)
+        message_layout.setSpacing(10)
+
+        # Ok button
+        ok_button = QPushButton("OK")
+        ok_button.setObjectName("error-popup-button")
+        ok_button.clicked.connect(self.accept)
+
+        # Button layout
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        button_layout.addWidget(ok_button)
+        button_layout.addStretch()
+
+        # Main layout
+        main_layout = QVBoxLayout(container)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.addLayout(message_layout)
+        main_layout.addSpacing(10)
+        main_layout.addLayout(button_layout)
+
+        # Top level layout
+        container_layout = QVBoxLayout(self)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.addWidget(container)
+
+        self.setLayout(container_layout)
+        self.exec()
+
+
+class QuiltNotImplementedPopup(QuiltErrorPopup):
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent, title="Not Implemented", message="This feature is not yet implemented.")
