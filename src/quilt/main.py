@@ -28,6 +28,7 @@ class QuiltMainWindow(QMainWindow):
         self._resizing = False
         self._resize_margin = 5
         self._resize_edge = None
+        self.setMouseTracking(True)
 
         # Set window icon
         self.setWindowIcon(QIcon("assets/quilt-nomid.ico"))
@@ -55,6 +56,7 @@ class QuiltMainWindow(QMainWindow):
         central.setLayout(layout)
         central.setStyleSheet(self.quilt_style)
         self.setCentralWidget(central)
+        self._enable_tracking()
 
 
     def _build_start_layout(self):
@@ -272,9 +274,16 @@ class QuiltMainWindow(QMainWindow):
             central.setLayout(layout)
             central.setStyleSheet(self.quilt_style)
             self.setCentralWidget(central)
+            self._enable_tracking()
 
     def _open_settings(self):
         QuiltNotImplementedPopup(self)
+
+    def _enable_tracking(self):
+        self.setMouseTracking(True)
+        self.centralWidget().setMouseTracking(True)
+        for widget in self.findChildren(QWidget):
+            widget.setMouseTracking(True)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
