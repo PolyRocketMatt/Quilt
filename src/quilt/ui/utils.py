@@ -226,3 +226,7 @@ def load_and_save_padded_icon(icon_name, width=32, height=32, padding=0):
 
     # Return the path to the saved icon
     return icon_path
+
+def load_stylesheet(style_name):
+    with open(f'styles/{style_name}.qss', 'r') as file:
+        return file.read()
