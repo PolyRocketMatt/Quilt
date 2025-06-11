@@ -1,10 +1,9 @@
 import sys
 
-from PySide6.QtCore import Qt, QSize, Signal, Slot
-from PySide6.QtGui import QIcon, QFont, QFontDatabase, QCursor
-from PySide6.QtWidgets import *
+from PySide6.QtGui import QFont, QFontDatabase
+from PySide6.QtWidgets import QApplication
 
-from src.quilt.ui.widgets import QuiltApplication
+from src.quilt.ui.windows import QuiltApplication
 
 def main():
     # Initialize the application
