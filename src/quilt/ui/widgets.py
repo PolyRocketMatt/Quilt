@@ -16,6 +16,11 @@ from src.quilt.workspace import QuiltWorkspace
 
 class QuiltTitleBar(QWidget):
     """Custom title bar widget for Quilt windows."""
+    toggle_navigation = Signal(bool)
+    toggle_features = Signal(bool)
+
+    navigation_toggled = True
+    features_toggled = True
 
     def __init__(self, parent: Optional[QWidget] = None, title: str = " Quilt"):
         super().__init__(parent)
@@ -27,6 +32,7 @@ class QuiltTitleBar(QWidget):
 
         self._start_pos: Optional[QPoint] = None
         self._is_dragging = False
+        self.layout_options = []
 
         self._init_ui()
 
@@ -35,13 +41,27 @@ class QuiltTitleBar(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
+        # Left side
         favicon = load_favicon()
         favicon.setObjectName("favicon")
 
         title_label = QLabel(self.title)
 
+        # Right side
+        self.btn_show_navigation = self._create_button("sidebar-left", "Toggle Navigation Bar", self._toggle_navigation)
+        self.btn_show_navigation.setObjectName("title-bar-small-button")
+        self.btn_show_navigation.hide()
+
+        self.btn_show_features = self._create_button("sidebar-right", "Toggle Secondary Bar", self._toggle_features)
+        self.btn_show_features.setObjectName("title-bar-small-button")
+        self.btn_show_features.hide()
+
+        self.layout_options.append(self.btn_show_navigation)
+        self.layout_options.append(self.btn_show_features)
+
+        # Frame utility buttons
         self.btn_minimize = self._create_button("minus", "Minimize", self.parent.showMinimized)
-        self.btn_restore = self._create_button("", "", self.toggle_state)
+        self.btn_restore = self._create_button("", "", self._toggle_state)
         self._update_restore_icon()
 
         self.btn_close = self._create_button("x", "Close", self.parent.close)
@@ -50,6 +70,8 @@ class QuiltTitleBar(QWidget):
         layout.addWidget(favicon)
         layout.addWidget(title_label)
         layout.addStretch()
+        layout.addWidget(self.btn_show_navigation)
+        layout.addWidget(self.btn_show_features)
         layout.addWidget(self.btn_minimize)
         layout.addWidget(self.btn_restore)
         layout.addWidget(self.btn_close)
@@ -62,6 +84,14 @@ class QuiltTitleBar(QWidget):
         button.clicked.connect(callback)
         return button
 
+    def _toggle_navigation(self) -> None:
+        self.navigation_toggled = not self.navigation_toggled
+        self.toggle_navigation.emit(self.navigation_toggled)
+
+    def _toggle_features(self) -> None:
+        self.features_toggled = not self.features_toggled
+        self.toggle_features.emit(self.features_toggled)
+
     def _update_restore_icon(self) -> None:
         if self.parent.isMaximized():
             icon, tooltip = "copy-simple", "Restore"
@@ -71,7 +101,7 @@ class QuiltTitleBar(QWidget):
         self.btn_restore.setIcon(QIcon(load_icon(icon)))
         self.btn_restore.setToolTip(tooltip)
 
-    def toggle_state(self) -> None:
+    def _toggle_state(self) -> None:
         if self.parent.isMaximized():
             self.parent.showNormal()
         else:
@@ -95,6 +125,13 @@ class QuiltTitleBar(QWidget):
         if event.button() == Qt.LeftButton:
             self._is_dragging = False
             event.accept()
+
+    @Slot(bool)
+    def toggle_layout_options(self, show_options) -> None:
+        if show_options:
+            [option.show() for option in self.layout_options]
+        else:
+            [option.hide() for option in self.layout_options]
 
 
 class QuiltFileSystemModel(QFileSystemModel):

@@ -10,7 +10,8 @@ QLabel#favicon {
 QPushButton#title-bar-button {
     background-color: transparent;
     color: #454545;
-    border: 0px solid #454545;
+    border: none;
+    border-radius: 0px;
     padding: 0px;
     margin: 0px;
 
@@ -22,10 +23,27 @@ QPushButton#title-bar-button:hover {
     background-color: #D9D9D9;
 }
 
+QPushButton#title-bar-small-button {
+    background-color: transparent;
+    color: #454545;
+    border: none;
+    border-radius: 4px;
+    padding: 0px;
+    margin: 0px;
+
+    min-width: 32px; /* Ensures a minimum width for the button */
+    min-height: 32px; /* Ensures a minimum height for the button */
+}
+
+QPushButton#title-bar-small-button:hover {
+    background-color: #D9D9D9;
+}
+
 QPushButton#title-bar-close-button {
     background-color: transparent;
     color: #454545;
-    border: 0px solid #454545;
+    border: none;
+    border-radius: 0px;
     padding: 0px;
     margin: 0px;
 

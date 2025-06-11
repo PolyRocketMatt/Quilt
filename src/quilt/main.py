@@ -1,6 +1,6 @@
 import sys
 
-from PySide6.QtCore import Qt, QSize, QPoint, QRect
+from PySide6.QtCore import Qt, QSize, Signal, Slot
 from PySide6.QtGui import QIcon, QFont, QFontDatabase, QCursor
 from PySide6.QtWidgets import *
 
@@ -17,6 +17,8 @@ def load_stylesheet(style_name):
         return file.read()
 
 class QuiltMainWindow(QMainWindow):
+    toggle_layout_options = Signal(bool)
+   
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Quilt Application")
@@ -134,13 +136,13 @@ class QuiltMainWindow(QMainWindow):
         self.feature_pane.setObjectName("feature-pane")
 
         # Create horizontal splitter
-        h_splitter = QSplitter(Qt.Horizontal)
-        h_splitter.addWidget(self.navigation_pane)
-        h_splitter.addWidget(self.view_pane)
-        h_splitter.addWidget(self.feature_pane)
+        self.main_splitter = QSplitter(Qt.Horizontal)
+        self.main_splitter.addWidget(self.navigation_pane)
+        self.main_splitter.addWidget(self.view_pane)
+        self.main_splitter.addWidget(self.feature_pane)
 
         # Set initial size ratios
-        h_splitter.setSizes([100, 200, 100])
+        self.main_splitter.setSizes([100, 200, 100])
 
         # Set minimum sizes for panes
         self.navigation_pane.setMinimumSize(350, 0)
@@ -148,14 +150,14 @@ class QuiltMainWindow(QMainWindow):
         self.feature_pane.setMinimumSize(350, 0)
 
         # Make sure panels are not collapsible
-        h_splitter.setCollapsible(0, False)  # Navigation pane
-        h_splitter.setCollapsible(1, False)  # View pane
-        h_splitter.setCollapsible(2, False)  # Feature pane
+        self.main_splitter.setCollapsible(0, False)  # Navigation pane
+        self.main_splitter.setCollapsible(1, False)  # View pane
+        self.main_splitter.setCollapsible(2, False)  # Feature pane
 
         # Create container
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.addWidget(h_splitter)
+        layout.addWidget(self.main_splitter)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         container.setLayout(layout)
@@ -169,7 +171,7 @@ class QuiltMainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # -------- Top toolbar --------
+        # Top toolbar
         top_toolbar = QToolBar()
         top_toolbar.setIconSize(QSize(16, 16))  # Optional
         top_toolbar.setMovable(False)
@@ -187,7 +189,7 @@ class QuiltMainWindow(QMainWindow):
         top_toolbar.addWidget(tool_btn_1)
         top_toolbar.addWidget(tool_btn_2)
 
-        # -------- Bottom toolbar --------
+        # Bottom toolbar
         bottom_toolbar = QToolBar()
         bottom_toolbar.setIconSize(QSize(16, 16))
         bottom_toolbar.setMovable(False)
@@ -263,10 +265,13 @@ class QuiltMainWindow(QMainWindow):
         if workspace_dir:
             self.workspace = QuiltWorkspace(workspace_dir)
 
+            # Obtain titlebar
+            titlebar = QuiltTitleBar(self)
+
             layout = QVBoxLayout()
             layout.setContentsMargins(0, 0, 0, 0)
             layout.setSpacing(0)
-            layout.addWidget(QuiltTitleBar(self))
+            layout.addWidget(titlebar)
             layout.addWidget(self._build_main_layout())
 
             # Central widget
@@ -276,6 +281,13 @@ class QuiltMainWindow(QMainWindow):
             self.setCentralWidget(central)
             self._enable_tracking()
 
+            # Toggle layout options
+            self.toggle_layout_options.connect(titlebar.toggle_layout_options)
+            self.toggle_layout_options.emit(True)
+
+            titlebar.toggle_navigation.connect(self._toggle_navigation_pane)
+            titlebar.toggle_features.connect(self._toggle_features_pane)
+
     def _open_settings(self):
         QuiltNotImplementedPopup(self)
 
@@ -284,30 +296,6 @@ class QuiltMainWindow(QMainWindow):
         self.centralWidget().setMouseTracking(True)
         for widget in self.findChildren(QWidget):
             widget.setMouseTracking(True)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self._start_pos = event.globalPos()
-            self._resize_edge = self._get_edge_at(event.pos())
-            self._resizing = self._resize_edge is not None
-            if self._resizing:
-                event.accept()
-            else:
-                super().mousePressEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        self._resizing = False
-        self._resize_edge = None
-        super().mouseReleaseEvent(event)
-
-    def mouseMoveEvent(self, event):
-        if self._resizing and self._resize_edge:
-            self._resize_window(event.globalPos())
-            event.accept()
-        else:
-            edge = self._get_edge_at(event.pos())
-            self._update_cursor(edge)
-            super().mouseMoveEvent(event)
 
     def _get_edge_at(self, pos):
         rect = self.rect()
@@ -381,6 +369,50 @@ class QuiltMainWindow(QMainWindow):
         }
         cursor = cursors.get(edge, Qt.ArrowCursor)
         self.setCursor(cursor)
+
+    @Slot(bool)
+    def _toggle_navigation_pane(self, visible):
+        if visible:
+            self.navigation_pane.show()
+            self.navigation_pane.setMinimumSize(350, 0)
+            self.main_splitter.setSizes([100, 1])
+        else:
+            self.navigation_pane.hide()
+            self.main_splitter.setSizes([0, 1])
+
+    @Slot(bool)
+    def _toggle_features_pane(self, visible):
+        if visible:
+            self.feature_pane.show()
+            self.feature_pane.setMinimumSize(350, 0)
+            self.main_splitter.setSizes([1, 1, 100])
+        else:
+            self.feature_pane.hide()
+            self.main_splitter.setSizes([1, 1, 0])
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._start_pos = event.globalPos()
+            self._resize_edge = self._get_edge_at(event.pos())
+            self._resizing = self._resize_edge is not None
+            if self._resizing:
+                event.accept()
+            else:
+                super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._resizing = False
+        self._resize_edge = None
+        super().mouseReleaseEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._resizing and self._resize_edge:
+            self._resize_window(event.globalPos())
+            event.accept()
+        else:
+            edge = self._get_edge_at(event.pos())
+            self._update_cursor(edge)
+            super().mouseMoveEvent(event)
 
 def main():
     # Initialize the application
