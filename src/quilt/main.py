@@ -8,7 +8,8 @@ from src.quilt.ui.utils import load_icon, load_colored_icon, load_and_save_padde
 from src.quilt.ui.widgets import (
     QuiltTitleBar, QuiltFileSystemModel,
     QuiltPDFViewer, QuiltTreeView, QuiltErrorPopup,
-    QuiltNotImplementedPopup
+    QuiltNotImplementedPopup, QuiltNavigationPane,
+    QuiltMainView
 )
 from src.quilt.workspace import QuiltWorkspace
 
@@ -117,144 +118,8 @@ class QuiltMainWindow(QMainWindow):
         # Return the container layout
         return container
 
-    def _build_main_layout(self):
-        # Create signaling widgets
-        self._build_navigation_tree()
-        self._build_pdf_viewer()
-
-        # Setup widget signaling
-        self.tree.pdf_selected.connect(self.pdf_viewer.load_pdf)
-
-        # Create panes
-        self.navigation_pane = self._build_navigation_pane()
-        self.view_pane = self._build_view_pane()
-        self.feature_pane = QWidget(self)
-
-        # Set object names for styling
-        self.navigation_pane.setObjectName("navigation-pane")
-        self.view_pane.setObjectName("view-pane")
-        self.feature_pane.setObjectName("feature-pane")
-
-        # Create horizontal splitter
-        self.main_splitter = QSplitter(Qt.Horizontal)
-        self.main_splitter.addWidget(self.navigation_pane)
-        self.main_splitter.addWidget(self.view_pane)
-        self.main_splitter.addWidget(self.feature_pane)
-
-        # Set initial size ratios
-        self.main_splitter.setSizes([100, 200, 100])
-
-        # Set minimum sizes for panes
-        self.navigation_pane.setMinimumSize(350, 0)
-        self.view_pane.setMinimumSize(100, 0)
-        self.feature_pane.setMinimumSize(350, 0)
-
-        # Make sure panels are not collapsible
-        self.main_splitter.setCollapsible(0, False)  # Navigation pane
-        self.main_splitter.setCollapsible(1, False)  # View pane
-        self.main_splitter.setCollapsible(2, False)  # Feature pane
-
-        # Create container
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.addWidget(self.main_splitter)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        container.setLayout(layout)
-
-        # Return the main layout
-        return container
-
-    def _build_navigation_pane(self):
-        navigation_pane = QWidget()
-        layout = QVBoxLayout(navigation_pane)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-
-        # Top toolbar
-        top_toolbar = QToolBar()
-        top_toolbar.setIconSize(QSize(16, 16))  # Optional
-        top_toolbar.setMovable(False)
-        top_toolbar.setFloatable(False)
-
-        # Add placeholder tool buttons
-        tool_btn_1 = QToolButton()
-        tool_btn_1.setText("🔍")
-        tool_btn_1.setToolTip("Search")
-
-        tool_btn_2 = QToolButton()
-        tool_btn_2.setText("➕")
-        tool_btn_2.setToolTip("Add")
-
-        top_toolbar.addWidget(tool_btn_1)
-        top_toolbar.addWidget(tool_btn_2)
-
-        # Bottom toolbar
-        bottom_toolbar = QToolBar()
-        bottom_toolbar.setIconSize(QSize(16, 16))
-        bottom_toolbar.setMovable(False)
-        bottom_toolbar.setFloatable(False)
-
-        bottom_btn = QToolButton()
-        bottom_btn.setText("⚙")
-        bottom_btn.setToolTip("Settings")
-
-        bottom_toolbar.addWidget(bottom_btn)
-
-        # Add widgets to the layout
-        layout.addWidget(top_toolbar)
-        layout.addWidget(self.tree)
-        layout.addWidget(bottom_toolbar)
-
-        # Set the navigation pane layout
-        navigation_pane.setLayout(layout)
-        navigation_pane.setObjectName("navigation-pane")
-
-        return navigation_pane
-
-    def _build_view_pane(self):
-        view_pane = QWidget()
-        layout = QVBoxLayout(view_pane)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-
-        # Add widgets to the layout
-        layout.addWidget(self.pdf_viewer)
-
-        # Set the view pane layout
-        view_pane.setLayout(layout)
-        view_pane.setObjectName("view-pane")
-
-        return view_pane
-
-
     def _build_feature_pane(self):
         pass
-
-    def _build_navigation_tree(self):
-        # Navigation tree
-        model = QuiltFileSystemModel(self)
-        model.setRootPath(self.workspace.workspace_dir)
-        model.setNameFilters(["*.pdf", "*.md", "*.png", "*.jpg", "*.jpeg", "*.gif"])
-        model.setNameFilterDisables(False)
-
-        caret_down_path = load_and_save_padded_icon("caret-down", padding=12)
-        caret_right_path = load_and_save_padded_icon("caret-right", padding=12)
-        caret_style = f"""
-            QTreeView#navigation-tree::branch:closed:has-children {{
-                image: url({caret_right_path});
-            }}
-
-            QTreeView#navigation-tree::branch:open:has-children {{
-                image: url({caret_down_path});
-            }}
-            """
-        full_style_sheet = self.quilt_style + caret_style
-        self.tree = QuiltTreeView(self, model, self.workspace, full_style_sheet)
-
-    def _build_pdf_viewer(self):
-        # PDF Viewer
-        self.pdf_viewer = QuiltPDFViewer(self)
 
     def _create_workspace(self):
         QuiltNotImplementedPopup(self)
@@ -265,14 +130,15 @@ class QuiltMainWindow(QMainWindow):
         if workspace_dir:
             self.workspace = QuiltWorkspace(workspace_dir)
 
-            # Obtain titlebar
+            # Obtain titlebar and layout
             titlebar = QuiltTitleBar(self)
+            view = QuiltMainView(self, self.workspace, self.quilt_style)
 
             layout = QVBoxLayout()
             layout.setContentsMargins(0, 0, 0, 0)
             layout.setSpacing(0)
             layout.addWidget(titlebar)
-            layout.addWidget(self._build_main_layout())
+            layout.addWidget(view)
 
             # Central widget
             central = QWidget()
@@ -285,8 +151,8 @@ class QuiltMainWindow(QMainWindow):
             self.toggle_layout_options.connect(titlebar.toggle_layout_options)
             self.toggle_layout_options.emit(True)
 
-            titlebar.toggle_navigation.connect(self._toggle_navigation_pane)
-            titlebar.toggle_features.connect(self._toggle_features_pane)
+            titlebar.toggle_navigation.connect(view.navigation_pane.toggle)
+            titlebar.toggle_features.connect(view.feature_pane.toggle)
 
     def _open_settings(self):
         QuiltNotImplementedPopup(self)
@@ -369,16 +235,6 @@ class QuiltMainWindow(QMainWindow):
         }
         cursor = cursors.get(edge, Qt.ArrowCursor)
         self.setCursor(cursor)
-
-    @Slot(bool)
-    def _toggle_navigation_pane(self, visible):
-        if visible:
-            self.navigation_pane.show()
-            self.navigation_pane.setMinimumSize(350, 0)
-            self.main_splitter.setSizes([100, 1])
-        else:
-            self.navigation_pane.hide()
-            self.main_splitter.setSizes([0, 1])
 
     @Slot(bool)
     def _toggle_features_pane(self, visible):

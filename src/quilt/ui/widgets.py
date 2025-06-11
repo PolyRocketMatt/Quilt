@@ -1,18 +1,98 @@
 from typing import Optional
 
-from PySide6.QtCore import Qt, QPoint, QUrl, Signal, Slot
+from PySide6.QtCore import Qt, QSize, QPoint, QUrl, Signal, Slot
 from PySide6.QtGui import QIcon, QMouseEvent
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWebEngineCore import QWebEnginePage
 from PySide6.QtWidgets import (
-    QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, 
-    QFileSystemModel, QStyledItemDelegate, QStyle, QStyleOptionViewItem,
-    QTreeView, QSizePolicy, QDialog
+    QDialog, 
+    QFileSystemModel,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy, QSplitter, QSplitterHandle, QStyle, QStyleOptionViewItem,  QStyledItemDelegate,
+    QToolBar, QToolButton, QTreeView,
+    QVBoxLayout,
+    QWidget, QWidgetAction
 )
 
-from src.quilt.ui.utils import load_icon, load_favicon, load_colored_icon
+from src.quilt.ui.utils import (
+    load_and_save_padded_icon,
+    load_colored_icon, 
+    load_favicon, 
+    load_icon
+)
 from src.quilt.workspace import QuiltWorkspace
 
+class HoverAwareSplitterHandle(QSplitterHandle):
+    def __init__(self, orientation, parent):
+        super().__init__(orientation, parent)
+        self.setMouseTracking(True)  
+        self.setAttribute(Qt.WA_Hover, True)  # Force Qt to trigger hover events
+
+class HoverAwareSplitter(QSplitter):
+    def createHandle(self):
+        return HoverAwareSplitterHandle(self.orientation(), self)
+
+class QuiltErrorPopup(QDialog):
+    def __init__(self, parent: Optional[QWidget] = None, title: str = '', message: str = ''):
+        super().__init__(parent)
+        self.setWindowTitle(title or "Error")
+        self.setModal(True)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
+        self.setAttribute(Qt.WA_TranslucentBackground) 
+        self.setObjectName("error-popup")
+
+        # Container
+        container = QWidget()
+        container.setObjectName("error-popup")
+
+        # Icon and message
+        icon = QIcon(load_colored_icon("warning-circle", "dark-red", 128, 128))
+        icon_label = QLabel()
+        icon_label.setPixmap(icon.pixmap(32, 32))
+        icon_label.setAlignment(Qt.AlignCenter)
+
+        text_label = QLabel(message)
+        text_label.setWordWrap(False)
+        text_label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+
+        # Layout
+        message_layout = QHBoxLayout()
+        message_layout.addWidget(icon_label)
+        message_layout.addWidget(text_label)
+        message_layout.setContentsMargins(10, 10, 10, 10)
+        message_layout.setSpacing(10)
+
+        # Ok button
+        ok_button = QPushButton("OK")
+        ok_button.setObjectName("error-popup-button")
+        ok_button.clicked.connect(self.accept)
+
+        # Button layout
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        button_layout.addWidget(ok_button)
+        button_layout.addStretch()
+
+        # Main layout
+        main_layout = QVBoxLayout(container)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.addLayout(message_layout)
+        main_layout.addSpacing(10)
+        main_layout.addLayout(button_layout)
+
+        # Top level layout
+        container_layout = QVBoxLayout(self)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.addWidget(container)
+
+        self.setLayout(container_layout)
+        self.exec()
+
+
+class QuiltNotImplementedPopup(QuiltErrorPopup):
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent, title="Not Implemented", message="This feature is not yet implemented.")
 
 class QuiltTitleBar(QWidget):
     """Custom title bar widget for Quilt windows."""
@@ -134,23 +214,6 @@ class QuiltTitleBar(QWidget):
             [option.hide() for option in self.layout_options]
 
 
-class QuiltFileSystemModel(QFileSystemModel):
-    """Custom file system model with icons based on file type."""
-
-    def data(self, index, role=Qt.DisplayRole):
-        if role == Qt.DecorationRole and index.column() == 0:
-            file_path = self.filePath(index)
-            if file_path.endswith(".pdf"):
-                return QIcon(load_icon("file-pdf"))
-            elif file_path.endswith(".md"):
-                return QIcon(load_icon("file-markdown"))
-            elif file_path.lower().endswith((".png", ".jpg", ".jpeg", ".gif")):
-                return QIcon(load_icon("file-image"))
-            elif self.isDir(index):
-                return QIcon(load_icon("folder"))
-        return super().data(index, role)
-
-
 class QuiltTreeItemDelegate(QStyledItemDelegate):
     """Custom delegate for styling items in the file tree view."""
 
@@ -203,6 +266,23 @@ class QuiltTreeView(QTreeView):
         super().mousePressEvent(event)
 
 
+class QuiltFileSystemModel(QFileSystemModel):
+    """Custom file system model with icons based on file type."""
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role == Qt.DecorationRole and index.column() == 0:
+            file_path = self.filePath(index)
+            if file_path.endswith(".pdf"):
+                return QIcon(load_icon("file-pdf"))
+            elif file_path.endswith(".md"):
+                return QIcon(load_icon("file-markdown"))
+            elif file_path.lower().endswith((".png", ".jpg", ".jpeg", ".gif")):
+                return QIcon(load_icon("file-image"))
+            elif self.isDir(index):
+                return QIcon(load_icon("folder"))
+        return super().data(index, role)
+
+
 class QuiltPDFViewer(QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -223,63 +303,204 @@ class QuiltPDFViewer(QWidget):
             else:
                 pass
 
-class QuiltErrorPopup(QDialog):
-    def __init__(self, parent: Optional[QWidget] = None, title: str = '', message: str = ''):
-        super().__init__(parent)
-        self.setWindowTitle(title or "Error")
-        self.setModal(True)
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
-        self.setAttribute(Qt.WA_TranslucentBackground) 
-        self.setObjectName("error-popup")
 
-        # Container
-        container = QWidget()
-        container.setObjectName("error-popup")
-
-        # Icon and message
-        icon = QIcon(load_colored_icon("warning-circle", "dark-red", 128, 128))
-        icon_label = QLabel()
-        icon_label.setPixmap(icon.pixmap(32, 32))
-        icon_label.setAlignment(Qt.AlignCenter)
-
-        text_label = QLabel(message)
-        text_label.setWordWrap(False)
-        text_label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-
-        # Layout
-        message_layout = QHBoxLayout()
-        message_layout.addWidget(icon_label)
-        message_layout.addWidget(text_label)
-        message_layout.setContentsMargins(10, 10, 10, 10)
-        message_layout.setSpacing(10)
-
-        # Ok button
-        ok_button = QPushButton("OK")
-        ok_button.setObjectName("error-popup-button")
-        ok_button.clicked.connect(self.accept)
-
-        # Button layout
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-        button_layout.addWidget(ok_button)
-        button_layout.addStretch()
-
-        # Main layout
-        main_layout = QVBoxLayout(container)
-        main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.addLayout(message_layout)
-        main_layout.addSpacing(10)
-        main_layout.addLayout(button_layout)
-
-        # Top level layout
-        container_layout = QVBoxLayout(self)
-        container_layout.setContentsMargins(0, 0, 0, 0)
-        container_layout.addWidget(container)
-
-        self.setLayout(container_layout)
-        self.exec()
-
-
-class QuiltNotImplementedPopup(QuiltErrorPopup):
+class QuiltToggleableWidget(QWidget):
+    """A base class for toggleable widgets that can be shown or hidden."""
+    
     def __init__(self, parent: Optional[QWidget] = None):
-        super().__init__(parent, title="Not Implemented", message="This feature is not yet implemented.")
+        super().__init__(parent)
+        self.setObjectName("toggleable-widget")
+
+    @Slot(bool)
+    def toggle(self, visible: bool):
+        if visible:
+            self.show()
+        else:
+            self.hide()
+
+
+class QuiltNavigationPane(QWidget):
+    state = True
+
+    def __init__(self, parent: Optional[QWidget] = None, workspace: Optional[QuiltWorkspace] = None,
+                 tree: Optional[QuiltTreeView] = None):
+        super().__init__(parent)
+
+        self.parent = parent
+        self.workspace = workspace
+        self.tree = tree
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Toolbar 
+        toolbar = QToolBar()
+        toolbar.setIconSize(QSize(16, 16))  # Optional
+        toolbar.setMovable(False)
+        toolbar.setFloatable(False)
+
+        # Spacers
+        left_spacer = QWidget()
+        left_spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        left_action = QWidgetAction(self)
+        left_action.setDefaultWidget(left_spacer)
+        
+        right_spacer = QWidget()
+        right_spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        right_action = QWidgetAction(self)
+        right_action.setDefaultWidget(right_spacer)
+        toolbar.addAction(right_action)
+
+        # Add placeholder tool buttons
+        btn_bookmark = QToolButton(self)
+        btn_bookmark.setIcon(QIcon(load_icon("bookmarks")))
+        btn_bookmark.setToolTip("Bookmarks")
+        btn_bookmark.setObjectName("toolbar-button")
+
+        # Adding tools to the toolbar
+        toolbar.addAction(left_action)
+        toolbar.addWidget(btn_bookmark)
+        toolbar.addAction(right_action)
+
+        # Add widgets to the layout
+        layout.addWidget(toolbar)
+        layout.addWidget(tree)
+
+        # Set the navigation pane layout
+        self.setLayout(layout)
+        self.setObjectName("navigation-pane")
+        self.setMinimumSize(350, 0)
+
+    @Slot(bool)
+    def toggle(self, visible):
+        if visible:
+            self.show()
+        else:
+            # Hide the navigation pane
+            self.hide()
+            #self.parent.setSizes([0, 1])
+
+
+class QuiltViewPane(QWidget):
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        
+        self.parent = parent
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Add widgets to the layout
+        #if pdf_viewer is not None:
+        #    layout.addWidget(pdf_viewer)
+    
+        # Set the view pane layout
+        self.setLayout(layout)
+        self.setObjectName("view-pane")
+        self.setMinimumSize(350, 0)
+
+
+class QuiltFeaturePane(QWidget):
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.parent = parent
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Set the feature pane layout
+        self.setLayout(layout)
+        self.setObjectName("feature-pane")
+        self.setMinimumSize(350, 0)
+
+    @Slot(bool)
+    def toggle(self, visible):
+        if visible:
+            self.show()
+        else:
+            # Hide the navigation pane
+            self.hide()
+            #self.parent.setSizes([0, 1])
+
+
+class QuiltMainView(QWidget):
+    def __init__(self, parent: Optional[QWidget] = None, workspace: Optional[QuiltWorkspace] = None,
+                 quilt_style = None):
+        super().__init__(parent)
+        self.parent = parent
+        self.workspace = workspace
+        self.quilt_style = quilt_style
+
+        # Build necessary components
+        self._build_navigation_tree()
+
+        # Setup widget signaling
+        #self.tree.pdf_selected.connect(self.pdf_viewer.load_pdf)
+
+        # Create horizontal splitter
+        self.main_splitter = HoverAwareSplitter(Qt.Horizontal)
+
+        # Create panes
+        self.navigation_pane = QuiltNavigationPane(self.main_splitter, self.workspace, self.tree)
+        self.view_pane = QuiltViewPane(self.main_splitter)
+        self.feature_pane = QuiltFeaturePane(self.main_splitter)
+
+        # Set object names for styling
+        self.view_pane.setObjectName("view-pane")
+        self.feature_pane.setObjectName("feature-pane")
+
+        # Add panes to the main splitter
+        self.main_splitter.addWidget(self.navigation_pane)
+        self.main_splitter.addWidget(self.view_pane)
+        self.main_splitter.addWidget(self.feature_pane)
+
+        # Set initial size ratios
+        self.main_splitter.setSizes([100, 200, 100])
+
+        # Set minimum sizes for panes
+        self.view_pane.setMinimumSize(100, 0)
+        self.feature_pane.setMinimumSize(350, 0)
+
+        # Make sure panels are not collapsible
+        self.main_splitter.setCollapsible(0, False)  # Navigation pane
+        self.main_splitter.setCollapsible(1, False)  # View pane
+        self.main_splitter.setCollapsible(2, False)  # Feature pane
+
+        # Mouse tracking for the handles of the splitter
+        for i in range(self.main_splitter.count()):
+            handle = self.main_splitter.handle(i)
+            handle.setMouseTracking(True)
+            handle.setCursor(Qt.SizeHorCursor)
+
+        # Create the main layout
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.main_splitter)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        
+        self.setLayout(layout)
+        self.setObjectName("main-view")
+    
+    def _build_navigation_tree(self):
+        # Navigation tree
+        model = QuiltFileSystemModel(self)
+        model.setRootPath(self.workspace.workspace_dir)
+        model.setNameFilters(["*.pdf", "*.md", "*.png", "*.jpg", "*.jpeg", "*.gif"])
+        model.setNameFilterDisables(False)
+
+        caret_down_path = load_and_save_padded_icon("caret-down", padding=12)
+        caret_right_path = load_and_save_padded_icon("caret-right", padding=12)
+        caret_style = f"""
+            QTreeView#navigation-tree::branch:closed:has-children {{
+                image: url({caret_right_path});
+            }}
+
+            QTreeView#navigation-tree::branch:open:has-children {{
+                image: url({caret_down_path});
+            }}
+            """
+        full_style_sheet = self.quilt_style + caret_style
+        self.tree = QuiltTreeView(self, model, self.workspace, full_style_sheet)

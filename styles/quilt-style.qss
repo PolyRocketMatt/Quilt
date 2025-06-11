@@ -90,6 +90,22 @@ QToolButton#startup-button:hover {
     background-color: #D9D9D9;
 }
 
+QToolButton#toolbar-button {
+    background-color: transparent;
+    color: #454545;
+    border: none;
+    border-radius: 4px;
+    padding: 0px;
+    margin: 0px;
+
+    min-width: 32px; /* Ensures a minimum width for the button */
+    min-height: 32px; /* Ensures a minimum height for the button */
+}
+
+QToolButton#toolbar-button:hover {
+    background-color: #D9D9D9;
+}
+
 QTreeView#navigation-tree {
     background-color: #EAEAEB;
     border: 0px;
@@ -128,4 +144,14 @@ QWidget#error-popup {
     background-color: #EAEAEB;
     border-radius: 12px;
     border: 2px solid #D9D9D9;
+}
+
+QSplitter::handle:hover {
+    background-color: #B0B0B0;
+    border: 1px solid #B0B0B0;
+}
+
+QSplitter::handle:pressed {
+    background-color: #B0B0B0;
+    border: 1px solid #B0B0B0;
 }
